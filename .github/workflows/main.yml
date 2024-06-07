@@ -13,7 +13,6 @@ env:
 jobs:
   build:
     strategy:
-      name: Release Windows App
     # Failure in one platform build won't impact the others
       fail-fast: false
       matrix:
