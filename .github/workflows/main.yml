@@ -9,40 +9,29 @@ env:
   NODE_OPTIONS: "--max-old-space-size=4096"
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        build:
-          - name: 'PostKid'
-            platform: 'windows/amd64'
-            os: 'windows-latest'
-
-    runs-on: ${{ matrix.build.os }}
+  build-windows:
+    runs-on: windows-latest
     
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          submodules: recursive
       
-      - name: Build Wails app
-        uses: dAppServer/wails-build-action@v2.2
-        id: build
+      - name: Setup Go
+        uses: actions/setup-go@v4
         with:
-          build-name: ${{ matrix.build.name }}
-          build-platform: ${{ matrix.build.platform }}
-          package: true
           go-version: '1.21'
       
-      # CETTE ÉTAPE CRÉE SEULEMENT DES ARTIFACTS - À REMPLACER
-      - name: Upload executable as artifact
-        uses: actions/upload-artifact@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          name: PostKid-Windows
-          path: build/bin/*.exe
+          node-version: '18'
       
-      # AJOUTEZ CETTE ÉTAPE POUR CRÉER LA RELEASE
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      
+      - name: Build PostKid
+        run: wails build -clean
+      
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
