@@ -13,10 +13,8 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
-            arch: amd64
           - os: ubuntu-latest
             platform: linux
-            arch: amd64
     
     runs-on: ${{ matrix.os }}
     
@@ -34,7 +32,6 @@ jobs:
         with:
           node-version: '18'
       
-      # Correction pour Linux
       - name: Install Linux dependencies
         if: matrix.platform == 'linux'
         run: |
@@ -44,8 +41,13 @@ jobs:
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
       
-      - name: Build PostKid
+      - name: Build PostKid (Windows)
+        if: matrix.platform == 'windows'
         run: wails build -clean
+      
+      - name: Build PostKid (Linux)
+        if: matrix.platform == 'linux'
+        run: wails build -clean -tags webkit2_41
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
