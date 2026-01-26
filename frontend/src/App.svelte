@@ -2,7 +2,6 @@
   import Highlight, { LineNumbers } from "svelte-highlight";
   import json from "svelte-highlight/languages/json";
   import "highlight.js/styles/github.css";
-  import { Quit } from "./lib/wailsjs/runtime/runtime";
 
   let method = "GET";
   let url;
@@ -10,13 +9,25 @@
   let body = "";
   let status = "";
   async function SubmitURL() {
+     console.log('Method:', method);
+  console.log('URL:', url);
+  console.log('Body:', body);
+  console.log('Body JSON:', JSON.stringify(body));
     let options = {
       method: method,
+      headers: {
+    'Content-Type': 'application/json'
+      },
     };
 
     if (body) {
+    // If body is already a string, don't stringify again
+    if (typeof body === 'string') {
+      options.body = body;
+    } else {
       options.body = JSON.stringify(body);
     }
+  }
 
     const response = await fetch(url, options);
     status = String(response.status);
@@ -26,29 +37,9 @@
 </script>
 
 <main>
-  <div class="flex gap-2 mb-2 bg-slate-300 rounded-sm text-2xl">
-    <span class="select-none">🐱‍👤</span>
-    <span class="flex-1 text-center select-none" style="--wails-draggable:drag"
-      >Postkid</span
-    >
-    <button on:click={() => Quit()} class="hover:bg-slate-400 btn-xs">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-5 w-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="red"
-        ><path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M6 18L18 6M6 6l12 12"
-        /></svg
-      >
-    </button>
-  </div>
+  
   <div class="pl-2 pr-2 flow flex-col">
-    <div class="flex gap-2">
+    <div class="flex gap-2 mt-4">
       <select
         bind:value={method}
         class="select select-info select-sm flex-none w-32"
@@ -75,7 +66,7 @@
         <span class="label-text font-bold">Body :</span>
       </div>
 
-      <textarea class="textarea textarea-bordered" bind:value={body}></textarea>
+      <textarea   class="textarea textarea-bordered h-32 font-mono leading-tight"  bind:value={body}></textarea>
     </label>
 
     <!-- svelte-ignore a11y-label-has-associated-control -->
@@ -84,7 +75,7 @@
         <span class="label-text font-bold">Result :</span>
         <span class="text-xs text-red-600">Status : {status}</span>
       </div>
-      <div class="border rounded-sm overflow-auto h-80 text-xs">
+      <div class="border rounded-sm overflow-auto h-72 text-xs">
         <Highlight language={json} code={result} let:highlighted>
           <LineNumbers {highlighted} hideBorder wrapLines />
         </Highlight>
