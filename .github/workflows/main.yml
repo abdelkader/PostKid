@@ -1,41 +1,37 @@
-name: Release Windows App
+name: Build PostKid Windows
 
 on:
+  workflow_dispatch:  # Permet le déclenchement manuel
   push:
     tags:
-    # Match any new tag
-      - '*'
-
-env:
-  # Necessary for most environments as build failure can occur due to OOM issues
-  NODE_OPTIONS: "--max-old-space-size=4096"
+      - 'v*'  # Déclenche automatiquement sur les tags (v1.0.0, etc.)
 
 jobs:
-  build:
-    strategy:
-    # Failure in one platform build won't impact the others
-      fail-fast: false
-      matrix:
-        build:
-          - name: 'App'
-            platform:  'linux/amd64'
-            os: 'ubuntu-latest'
-          - name: 'App'
-            platform:  'windows/amd64'
-            os: 'windows-latest'
-
-    runs-on: ${{ matrix.build.os }}
+  build-windows:
+    runs-on: windows-latest
+    
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v3
+      
+      - name: Setup Go
+        uses: actions/setup-go@v4
         with:
-          submodules: recursive
-
-      - name: Build wails
-        uses: dAppServer/wails-build-action@v2.2
-        id: build
+          go-version: '1.21'  # Vérifiez votre version dans go.mod
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          build-name: ${{ matrix.build.name }}
-          build-platform: ${{ matrix.build.platform }}
-          package: true
-          go-version: '1.21'
+          node-version: '18'
+      
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      
+      - name: Build PostKid
+        run: wails build
+      
+      - name: Upload executable
+        uses: actions/upload-artifact@v3
+        with:
+          name: PostKid-Windows
+          path: build/bin/*.exe
