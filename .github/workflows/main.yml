@@ -1,37 +1,51 @@
-name: Build PostKid Windows
+name: Release PostKid
 
 on:
-  workflow_dispatch:  # Permet le déclenchement manuel
   push:
     tags:
-      - 'v*'  # Déclenche automatiquement sur les tags (v1.0.0, etc.)
+      - 'v*'
+
+env:
+  NODE_OPTIONS: "--max-old-space-size=4096"
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        build:
+          - name: 'PostKid'
+            platform: 'windows/amd64'
+            os: 'windows-latest'
+
+    runs-on: ${{ matrix.build.os }}
     
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
-      
-      - name: Setup Go
-        uses: actions/setup-go@v4
         with:
-          go-version: '1.21'  # Vérifiez votre version dans go.mod
+          submodules: recursive
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Build Wails app
+        uses: dAppServer/wails-build-action@v2.2
+        id: build
         with:
-          node-version: '18'
+          build-name: ${{ matrix.build.name }}
+          build-platform: ${{ matrix.build.platform }}
+          package: true
+          go-version: '1.21'
       
-      - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-      
-      - name: Build PostKid
-        run: wails build
-      
-      - name: Upload executable
+      # CETTE ÉTAPE CRÉE SEULEMENT DES ARTIFACTS - À REMPLACER
+      - name: Upload executable as artifact
         uses: actions/upload-artifact@v4
         with:
           name: PostKid-Windows
           path: build/bin/*.exe
+      
+      # AJOUTEZ CETTE ÉTAPE POUR CRÉER LA RELEASE
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/bin/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
