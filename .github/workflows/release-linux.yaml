@@ -62,6 +62,15 @@ jobs:
           -ldflags "-X main.version=v${{ steps.normalise_version.outputs.version }}" \
           -o PostKid
 
+      - name: Verify build output
+        run: |
+          echo "=== Build directory contents ==="
+          ls -la build/
+          echo "=== Bin directory contents ==="
+          ls -la build/bin/
+          echo "=== Looking for icon ==="
+          find build/ -name "*.png" -o -name "appicon*"
+
       - name: Create DEB package structure
         run: |
           mkdir -p build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/DEBIAN
@@ -71,7 +80,7 @@ jobs:
 
       - name: Create DEBIAN control file
         run: |
-          cat > build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/DEBIAN/control << EOF
+          cat > build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/DEBIAN/control << 'EOF'
           Package: post-kid
           Version: ${{ steps.normalise_version.outputs.version }}
           Section: utils
@@ -85,7 +94,7 @@ jobs:
 
       - name: Create desktop file
         run: |
-          cat > build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/usr/share/applications/post-kid.desktop << EOF
+          cat > build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/usr/share/applications/post-kid.desktop << 'EOF'
           [Desktop Entry]
           Name=PostKid
           Comment=A micro API testing tool
@@ -99,10 +108,22 @@ jobs:
       - name: Copy binary to DEB structure
         run: |
           cp build/bin/PostKid build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/usr/local/bin/
+          chmod +x build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/usr/local/bin/PostKid
 
-      - name: Copy icon
+      - name: Copy icon (find it first)
         run: |
-          cp build/appicon.png build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/usr/share/icons/hicolor/512x512/apps/post-kid.png
+          # Chercher l'icône dans différents emplacements possibles
+          if [ -f "build/appicon.png" ]; then
+            cp build/appicon.png build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/usr/share/icons/hicolor/512x512/apps/post-kid.png
+          elif [ -f "appicon.png" ]; then
+            cp appicon.png build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/usr/share/icons/hicolor/512x512/apps/post-kid.png
+          elif [ -f "build/bin/appicon.png" ]; then
+            cp build/bin/appicon.png build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/usr/share/icons/hicolor/512x512/apps/post-kid.png
+          else
+            echo "Warning: Icon not found, creating a placeholder"
+            # Créer une icône PNG vide de 512x512 si aucune icône n'est trouvée
+            convert -size 512x512 xc:lightblue build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64/usr/share/icons/hicolor/512x512/apps/post-kid.png || true
+          fi
 
       - name: Build DEB package
         run: |
@@ -129,7 +150,11 @@ jobs:
           build_dir="build/linux/post-kid_${{ steps.normalise_version.outputs.version }}_amd64"
           cp $build_dir/usr/local/bin/PostKid AppDir/usr/bin/
           cp $build_dir/usr/share/applications/post-kid.desktop AppDir/usr/share/applications/
-          cp $build_dir/usr/share/icons/hicolor/512x512/apps/post-kid.png AppDir/usr/share/icons/hicolor/512x512/apps/
+          
+          # Copier l'icône si elle existe
+          if [ -f "$build_dir/usr/share/icons/hicolor/512x512/apps/post-kid.png" ]; then
+            cp $build_dir/usr/share/icons/hicolor/512x512/apps/post-kid.png AppDir/usr/share/icons/hicolor/512x512/apps/
+          fi
 
           # Update desktop file
           sed -i 's#/usr/local/bin/PostKid#PostKid#g' AppDir/usr/share/applications/post-kid.desktop
