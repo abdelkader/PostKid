@@ -42,21 +42,21 @@ jobs:
     strategy:
       matrix:
         include:
-          # Ubuntu 22.04 / 23.x — webkit2gtk 4.0
+          # Ubuntu 22.04 / 23.x — webkit2gtk 4.0 — DEB standard
           - runner: ubuntu-22.04
             webkit_dev: libwebkit2gtk-4.0-dev
             webkit_runtime: libwebkit2gtk-4.0-37
             webkit_tags: ""
             webkit_name: webkit2gtk-4.0
-            deb_suffix: ubuntu22
+            deb_name: post-kid_${{ needs.prepare.outputs.version }}_linux_amd64
 
-          # Ubuntu 24.04 / 25.x — webkit2gtk 4.1
+          # Ubuntu 24.04 / 25.x — webkit2gtk 4.1 — DEB moderne
           - runner: ubuntu-24.04
             webkit_dev: libwebkit2gtk-4.1-dev
             webkit_runtime: libwebkit2gtk-4.1-0
             webkit_tags: "-tags webkit2_41"
             webkit_name: webkit2gtk-4.1
-            deb_suffix: ubuntu24
+            deb_name: post-kid_${{ needs.prepare.outputs.version }}_webkit2_41
 
     steps:
       - name: Checkout source code
@@ -103,7 +103,7 @@ jobs:
 
       - name: Create DEB package structure
         run: |
-          PKG=post-kid_${{ needs.prepare.outputs.version }}_${{ matrix.deb_suffix }}_amd64
+          PKG=${{ matrix.deb_name }}
           mkdir -p build/linux/$PKG/DEBIAN
           mkdir -p build/linux/$PKG/usr/local/bin
           mkdir -p build/linux/$PKG/usr/share/applications
@@ -160,29 +160,9 @@ jobs:
           cd build/linux
           dpkg-deb --build -Zxz $PKG
 
-      - name: Build tarball (for non-Debian distros)
-        run: |
-          TARBALL=post-kid_${{ needs.prepare.outputs.version }}_${{ matrix.deb_suffix }}_linux_amd64
-          mkdir -p tarball/$TARBALL
-          cp build/bin/PostKid tarball/$TARBALL/
-          cat > tarball/$TARBALL/install.sh << 'EOF'
-          #!/bin/bash
-          set -e
-          echo "Installing PostKid..."
-          sudo cp PostKid /usr/local/bin/PostKid
-          sudo chmod +x /usr/local/bin/PostKid
-          echo "Done! Run 'PostKid' to launch."
-          EOF
-          chmod +x tarball/$TARBALL/install.sh
-          cd tarball
-          tar -czf $TARBALL.tar.gz $TARBALL/
-          echo "TARBALL=$TARBALL" >> $GITHUB_ENV
-
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ needs.prepare.outputs.version }}
-          files: |
-            ./build/linux/${{ env.PKG }}.deb
-            ./tarball/${{ env.TARBALL }}.tar.gz
+          files: ./build/linux/${{ env.PKG }}.deb
           token: ${{ secrets.GITHUB_TOKEN }}
